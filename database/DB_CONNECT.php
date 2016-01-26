@@ -1,4 +1,5 @@
 <?php
+namespace db;
 /**
  * Created by PhpStorm.
  * User: tylerdotson
