@@ -7,7 +7,6 @@ namespace db;
 class MySQLI_DB extends Database
 {
     private $connection;
-    private $resource;
 
     public function __construct()
     {
@@ -21,30 +20,44 @@ class MySQLI_DB extends Database
 
     public function query($query)
     {
-        $results = [];
-        if($query !== "")
-        {
-            $this->resource = $this->connection->query($query);
-            while($row = $this->resource->fetch_assoc())
-            {
-                $results[] = $row;
-            }
+        $results = array();
+        $queryString     = trim($query);
+        $explodedQuery   = explode(' ', $queryString);
+        $queryFirstWord  = strtoupper(trim($explodedQuery[0]));
+        $resource = $this->connection->query($query);
 
-            return $results;
+        if (!$resource) {
+            throw new Exception("Database Error [{$this->connection->errno}] {$this->connection->error}");
+        }
+
+        if($this->connection->errno === 0)
+        {
+            switch($queryFirstWord)
+            {
+                case "DELETE":
+                case "UPDATE":
+                    return $this->connection->affected_rows;
+                    break;
+                case "INSERT":
+                    return $this->connection->insert_id;
+                    break;
+                default:
+                    while($row = $resource->fetch_assoc())
+                    {
+                        $results[] = $row;
+                    }
+                    return $results;
+                    break;
+            }
         }
         else
         {
-            return null;
+            return $this->connection->error;
         }
     }
 
     public function escapeString($string){
         return mysqli_real_escape_string($this->connection, $string);
-    }
-
-    public function getLastInsertedID()
-    {
-        return $this->resource->insert_id;
     }
 
     public function __destruct()
